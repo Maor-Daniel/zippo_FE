@@ -1,0 +1,272 @@
+# Software Requirements Specification - Price Comparison App
+
+## System Design
+- **Application Type**: Cross-platform mobile app with web companion
+- **Primary Platform**: Mobile (iOS, Android) with responsive web app
+- **Deployment Model**: Client-server architecture
+- **Core Components**:
+  - Mobile app (Flutter-based front-end)
+  - Web app (Flutter Web)
+  - Backend API service (Python)
+  - Data scraping service (Python)
+  - Authentication service
+  - Database systems
+  - Push notification service
+
+## Architecture Pattern
+- **Mobile & Web**: MVVM (Model-View-ViewModel) architecture
+  - **Models**: Data structures representing shopping lists, products, stores, prices
+  - **Views**: Flutter widgets implementing UI components from design doc
+  - **ViewModels**: Business logic handling user interactions and data operations
+- **Backend**: Service-oriented architecture with microservices
+  - **API Gateway**: Entry point for client requests
+  - **Core Services**: List management, price comparison, user management
+  - **Background Services**: Data scraping, price analysis, notification engine
+
+## State Management
+- **Flutter**: Provider + ChangeNotifier pattern
+  - Global app state for user preferences and authentication
+  - Scoped models for feature-specific state (shopping lists, comparison results)
+  - Local state for UI components
+- **Backend State**:
+  - RESTful API stateless design
+  - Redis for caching frequently accessed data
+  - Session management for authenticated users
+
+## Data Flow
+- **List Creation Flow**:
+  1. User inputs (search, scan, import) → Mobile app
+  2. Data validation and formatting → Local state
+  3. Sync to backend via API
+  4. Storage in user's profile database
+- **Price Comparison Flow**:
+  1. User initiates comparison with shopping list and preferences
+  2. Request sent to backend API
+  3. Backend queries store price database
+  4. Comparison algorithm runs on server
+  5. Results returned to client
+  6. Displayed to user with save option
+- **Price Alert Flow**:
+  1. Backend scraping service updates price database
+  2. Price change detection service analyzes changes
+  3. Notification service triggered for relevant users
+  4. Push notifications sent to mobile devices
+
+## Technical Stack
+- **Frontend**:
+  - **Framework**: Flutter (mobile & web)
+  - **State Management**: Provider
+  - **UI Components**: Custom Flutter widgets based on design doc
+  - **Image Processing**: TensorFlow Lite for OCR and image recognition
+  - **Barcode Scanning**: flutter_barcode_scanner
+  - **Charts**: fl_chart for price history visualization
+  - **Maps**: google_maps_flutter for store locations
+- **Backend**:
+  - **Framework**: FastAPI (Python)
+  - **Task Queue**: Celery with Redis for background processing
+  - **Web Scraping**: Scrapy, Beautiful Soup
+  - **Data Processing**: Pandas for price analysis
+  - **Caching**: Redis
+- **Database**:
+  - **Primary Database**: PostgreSQL (relational)
+  - **Time-Series Data**: TimescaleDB extension (for price history)
+  - **Caching Layer**: Redis
+- **DevOps**:
+  - **CI/CD**: GitHub Actions
+  - **Containerization**: Docker
+  - **Orchestration**: Kubernetes for scaling scraping services
+  - **Monitoring**: Prometheus and Grafana
+
+## Authentication Process
+- **Authentication Methods**:
+  - Email/password registration
+  - OAuth 2.0 integration (Google, Apple)
+  - Anonymous browsing with limited features
+- **Security**:
+  - JWT (JSON Web Token) for stateless authentication
+  - Refresh token mechanism
+  - Secure storage of credentials on device
+  - HTTPS for all communications
+- **User Flow**:
+  1. User registers or signs in
+  2. Backend validates credentials and issues JWT
+  3. Token stored securely on device
+  4. Token included in API request headers
+  5. Backend validates token for each request
+
+## Route Design
+- **Mobile App Routes**:
+  - `/` - Splash screen with auto-redirect
+  - `/home` - Dashboard view
+  - `/lists` - Shopping list management
+  - `/lists/create` - List creation flow
+  - `/lists/:id` - Specific list view
+  - `/compare/:listId` - Comparison results
+  - `/alerts` - Price alerts management
+  - `/profile` - User profile and settings
+  - `/store/:id` - Store details view
+  - `/product/:id` - Product details with price history
+- **Web App Additional Routes**:
+  - `/dashboard` - Extended analytics view
+  - `/lists/import` - Advanced import tools
+  - `/reports` - Savings reports and analysis
+
+## API Design
+- **RESTful Endpoints**:
+  - **Authentication**:
+    - `POST /api/auth/register` - Create new account
+    - `POST /api/auth/login` - User login
+    - `POST /api/auth/refresh` - Refresh token
+    - `POST /api/auth/logout` - User logout
+  - **Lists**:
+    - `GET /api/lists` - Get user's shopping lists
+    - `POST /api/lists` - Create new list
+    - `GET /api/lists/:id` - Get specific list
+    - `PUT /api/lists/:id` - Update list
+    - `DELETE /api/lists/:id` - Delete list
+    - `POST /api/lists/import` - Import list from external source
+    - `POST /api/lists/:id/items` - Add item to list
+  - **Products**:
+    - `GET /api/products/search` - Search products
+    - `GET /api/products/categories` - Get product categories
+    - `GET /api/products/:id` - Get product details
+    - `GET /api/products/:id/history` - Get price history
+  - **Price Comparison**:
+    - `POST /api/compare` - Compare prices for a list
+    - `GET /api/stores` - Get store information
+    - `GET /api/stores/nearby` - Get nearby stores
+  - **Alerts**:
+    - `GET /api/alerts` - Get user's price alerts
+    - `POST /api/alerts` - Create new alert
+    - `DELETE /api/alerts/:id` - Delete alert
+    - `GET /api/alerts/summary` - Get weekly summary
+- **Response Format**:
+  ```json
+  {
+    "status": "success|error",
+    "data": {},
+    "message": "Optional message"
+  }
+  ```
+
+## Database Design ERD
+- **Users**
+  - user_id (PK)
+  - email
+  - password_hash
+  - name
+  - preferences_json
+  - created_at
+  - last_login
+  
+- **ShoppingLists**
+  - list_id (PK)
+  - user_id (FK)
+  - name
+  - description
+  - is_favorite
+  - created_at
+  - updated_at
+
+- **ListItems**
+  - item_id (PK)
+  - list_id (FK)
+  - product_id (FK)
+  - quantity
+  - notes
+  - category_id (FK)
+  - added_at
+
+- **Products**
+  - product_id (PK)
+  - name
+  - description
+  - brand
+  - category_id (FK)
+  - barcode
+  - base_upc
+  - image_url
+  - average_price
+  - price_range_min
+  - price_range_max
+  - last_price_update
+  - availability_score
+  - popularity_rank
+  - created_at
+
+- **Categories**
+  - category_id (PK)
+  - name
+  - parent_category_id (FK, self-referential)
+  - icon_name
+
+- **StoreChains**
+  - chain_id (PK)
+  - name
+  - website
+  - logo_url
+  - data_source_url
+  - scraping_schedule
+
+- **Stores**
+  - store_id (PK)
+  - chain_id (FK)
+  - store_code
+  - name
+  - address
+  - city
+  - state
+  - zip_code
+  - latitude
+  - longitude
+  - phone
+  - hours_json
+  - is_active
+
+
+
+- **StorePrices**
+  - price_id (PK)
+  - store_id (FK)
+  - product_id (FK)
+  - regular_price
+  - current_price
+  - currency
+  - is_on_sale
+  - sale_start_date
+  - sale_end_date
+  - price_updated_at
+
+- **PriceHistory**
+  - history_id (PK)
+  - store_id (FK)
+  - product_id (FK)
+  - price
+  - recorded_at
+  - was_on_sale
+
+- **PriceAlerts**
+  - alert_id (PK)
+  - user_id (FK)
+  - product_id (FK)
+  - store_id (FK, nullable)
+  - target_price
+  - created_at
+  - last_triggered_at
+  - is_active
+
+- **ComparisonResults**
+  - comparison_id (PK)
+  - user_id (FK)
+  - list_id (FK)
+  - created_at
+  - max_distance
+  - stores_compared_json
+  - detailed_results_json
+
+- **UserPreferredStores**
+  - preference_id (PK)
+  - user_id (FK)
+  - store_id (FK)
+  - is_favorite
+  - last_visited
